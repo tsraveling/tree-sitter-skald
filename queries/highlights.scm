@@ -8,10 +8,11 @@
 "~" @keyword
 "<" @keyword
 (variable_declaration
-  name: (variable_name) @variable)
+  name: (variable_name) @attribute)
+
 
 ; Variable references
-(variable_ref) @variable
+(variable_ref) @attribute
 
 ; Testbeds
 "@testbed" @keyword
@@ -20,6 +21,7 @@
 
 ; Attributions
 (attribution) @attribute
+(attribution) @markup.italic
 
 ; Conditionals
 "(?" @punctuation.bracket
@@ -30,7 +32,7 @@
 "(else)" @keyword
 
 ; Logic beats
-(logic_beat "*" @punctuation.special)
+(logic_beat "*" @markup.bold)
 
 ; Operations
 "->" @operator
@@ -47,11 +49,12 @@
 
 ; Mutations
 (mutation_op
-  variable: (variable_name) @variable
+  variable: (variable_name) @attribute
   operator: _ @operator)
 
 ; Choices
 ">" @punctuation.special
+(choice text: (text_content) @markup.italic)
 
 ; Insertions
 "{" @punctuation.bracket

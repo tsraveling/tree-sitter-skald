@@ -29,6 +29,10 @@
       "required": false,
       "types": [
         {
+          "type": "choices",
+          "named": true
+        },
+        {
           "type": "conditional",
           "named": true
         },
@@ -60,10 +64,6 @@
       "types": [
         {
           "type": "beat",
-          "named": true
-        },
-        {
-          "type": "choices",
           "named": true
         },
         {

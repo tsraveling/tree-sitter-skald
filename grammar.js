@@ -56,7 +56,6 @@ module.exports = grammar({
         $.beat,
         $.logic_beat,
       )),
-      optional($.choices),
     ),
 
     block_tag: $ => seq('#', $.identifier, /\n/),
@@ -70,6 +69,7 @@ module.exports = grammar({
       field('content', $.text_content),
       /\n/,
       repeat($.indented_operation),
+      optional($.choices),
     )),
 
     logic_beat: $ => choice(

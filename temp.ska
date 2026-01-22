@@ -4,9 +4,16 @@ First beat
 
 Second beat with an {injection}.
 
+attribution: Test case
+
 This one has a normal ternary, and {some_flag ? "yarrrrr!" : "narrrrr."} is the result.
 
+> test
+> This is another choice
+
 Switch ternary: {pet_type ? [1: "cat", 2: "dog", 3: "camel"]}
+
+(? some_var and another_var and :check_method()) Conditional beat
 
 This is a normal text block with some ops on it
   -> some_transition -- These intended commands following beats or choices are "operations"

@@ -185,18 +185,6 @@
               }
             ]
           }
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
-              "name": "choices"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
         }
       ]
     },
@@ -285,6 +273,18 @@
               "type": "SYMBOL",
               "name": "indented_operation"
             }
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "choices"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
           }
         ]
       }
