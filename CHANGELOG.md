@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.1 - 2026-01-22
+#### Bug Fixes
+- testing something with conventional commits - (e9a2e16) - Tim Raveling
+
+- - -
+
 ## 0.1.0 - 2026-01-22
 #### Features
 - githook setup and syntax update - (b308e69) - Tim Raveling
