@@ -3,16 +3,15 @@ module.exports = grammar({
 
   extras: $ => [
     /[ \t]/,
-    $.comment,
     $.empty,
   ],
 
   rules: {
 
     source_file: $ => seq(
-      repeat($.variable_declaration),
-      repeat($.testbed),
-      repeat($.block),
+      repeat(choice($.variable_declaration, prec(3, $.comment))),
+      repeat(choice($.testbed, prec(2, $.comment))),
+      repeat(choice($.block, prec(1, $.comment))),
     ),
 
     // Empty lines
@@ -27,6 +26,7 @@ module.exports = grammar({
       field('name', $.variable_name),
       '=',
       field('value', $.rvalue),
+      optional($.comment),
       /\n/,
     ),
 
@@ -36,9 +36,11 @@ module.exports = grammar({
     testbed: $ => seq(
       '@testbed',
       field('name', $.identifier),
+      optional($.comment),
       /\n/,
       repeat($.testbed_declaration),
       '@end',
+      optional($.comment),
       /\n/,
     ),
 
@@ -46,19 +48,21 @@ module.exports = grammar({
       field('variable', $.variable_name),
       '=',
       field('value', $.simple_value),
+      optional($.comment),
       /\n/,
     ),
 
     // Blocks
-    block: $ => seq(
+    block: $ => prec.right(seq(
       field('tag', $.block_tag),
       repeat(choice(
         $.beat,
         $.logic_beat,
+        $.comment,
       )),
-    ),
+    )),
 
-    block_tag: $ => seq('#', $.identifier, /\n/),
+    block_tag: $ => seq('#', $.identifier, optional($.comment), /\n/),
 
     attribution: $ => token(seq(/[a-zA-Z_][a-zA-Z0-9_]*/, ':')),
 
@@ -77,6 +81,7 @@ module.exports = grammar({
       seq(
         '*',
         choice($.conditional, '(else)'),
+        optional($.comment),
         /\n/,
         repeat1($.indented_operation),
       ),
@@ -85,6 +90,7 @@ module.exports = grammar({
         '*',
         choice($.conditional, '(else)'),
         $.operation,
+        optional($.comment),
         /\n/,
       ),
     ),
@@ -183,6 +189,7 @@ module.exports = grammar({
     indented_operation: $ => prec.right(2, seq(
       /[ \t]+/,
       $.operation,
+      optional($.comment),
       /\n/,
     )),
 
