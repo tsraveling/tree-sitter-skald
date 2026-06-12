@@ -1,23 +1,38 @@
 ; Comments
 (comment) @comment
+(inline_comment) @comment
 
 ; Block tags
 (block_tag) @label
+(block_tag depth: _ @punctuation.special)
 
-; Variable declarations
-"~" @keyword
-"<" @keyword
-(variable_declaration
-  name: (variable_name) @attribute)
+; Top matter keywords
+"@let" @keyword
+"@end" @keyword
+"@receive" @keyword
+"@testbed" @keyword
+"@methods" @keyword
+"@globals" @keyword
 
+; Conditional chain keywords
+"@if" @keyword
+"@elseif" @keyword
+"@else" @keyword
+"@endif" @keyword
+
+; Declarations
+(declaration name: (variable_name) @attribute)
+(type) @type
+(method_signature) @type
+(testbed name: (identifier) @type)
+(testbed_declaration variable: (variable_name) @attribute)
+
+; Codex methods
+(method_def name: (identifier) @function)
+(arg_def name: (identifier) @variable.parameter)
 
 ; Variable references
 (variable_ref) @attribute
-
-; Testbeds
-"@testbed" @keyword
-"@end" @keyword
-(testbed name: (identifier) @type)
 
 ; Attributions
 (attribution) @attribute
@@ -29,17 +44,14 @@
 "and" @keyword.operator
 "or" @keyword.operator
 "!" @operator
-"(else)" @keyword
-
-; Logic beats
-(logic_beat "*" @markup.bold)
 
 ; Operations
 "->" @operator
-(move_op target: (identifier) @label)
+(move_target) @label
+"^" @operator
 "GO" @keyword
 (go_module_op module: (module_path) @string.special.path)
-(go_module_op tag: (identifier) @label)
+(receive module: (module_path) @string.special.path)
 "EXIT" @keyword
 
 ; Method calls
@@ -62,9 +74,8 @@
 "?" @operator
 (ternary_insertion) @conditional
 (switch_ternary) @conditional
-
-; Inline comments
-(inline_comment) @comment
+((switch_case key: (rvalue (variable_ref) @constant.builtin))
+  (#eq? @constant.builtin "_"))
 
 ; Values
 (string) @string

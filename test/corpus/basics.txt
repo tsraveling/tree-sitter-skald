@@ -1,66 +1,97 @@
 ==================
-Variable declaration
+Let block with typed declarations
 ==================
 
-~myvar = "hello"
+@let
+  age int = 30
+  name string
+  gender = "f"
+  alive = true
+  progress float
+@end
 
 ---
 
 (source_file
   (empty)
-  (variable_declaration
-    name: (variable_name)
-    value: (rvalue (simple_value (string)))))
-
-==================
-Mixed declaration and comment header
-==================
-
--- This is a comment!
-~ some_var = 3 -- This is a raw value
-~ some_other = :call_method() -- this initialized the variable with a call to an external method
-
--- These are inherited variables, with local testing values
-< imported_var = 0
-< player_name = "Billy"
-
----
-
-(source_file
-  (empty)
-  (comment)
-  (empty)
-  (variable_declaration
-    name: (variable_name)
-    value: (rvalue
+  (let_block
+    (declaration
+      (variable_name
+        (identifier))
+      (type)
       (simple_value
         (number)))
-    (comment))
-  (variable_declaration
-    name: (variable_name)
-    value: (rvalue
-      (method_call
-        method: (identifier)))
-    (comment))
+    (declaration
+      (variable_name
+        (identifier))
+      (type))
+    (declaration
+      (variable_name
+        (identifier))
+      (simple_value
+        (string)))
+    (declaration
+      (variable_name
+        (identifier))
+      (simple_value
+        (boolean)))
+    (declaration
+      (variable_name
+        (identifier))
+      (type))))
+
+==================
+Top matter in any order
+==================
+
+--- This is a comment!
+@let
+  health int = -10 --- negative default
+@end
+
+@testbed alpha
+  age = 50
+  name = "Bob"
+@end
+
+@receive subfolder/scene.ska
+
+---
+
+(source_file
   (empty)
   (comment)
   (empty)
-  (variable_declaration
-    name: (variable_name)
-    value: (rvalue
+  (let_block
+    (declaration
+      (variable_name
+        (identifier))
+      (type)
       (simple_value
-        (number))))
-  (variable_declaration
-    name: (variable_name)
-    value: (rvalue
+        (number))
+      (comment)))
+  (empty)
+  (testbed
+    (identifier)
+    (testbed_declaration
+      (variable_name
+        (identifier))
       (simple_value
-        (string)))))
+        (number)))
+    (testbed_declaration
+      (variable_name
+        (identifier))
+      (simple_value
+        (string))))
+  (empty)
+  (receive
+    (module_path)))
 
 ==================
 Basic block with attributed beat
 ==================
 
-#start_block
+# start_block
 
 Alice: Hello world
 
@@ -69,17 +100,57 @@ Alice: Hello world
 (source_file
   (empty)
   (block
-    tag: (block_tag (identifier))
+    (block_tag
+      (identifier))
     (empty)
     (beat
-      attribution: (attribution)
-      content: (text_content (text_fragment)))))
+      (attribution)
+      (text_content
+        (text_fragment)))))
 
-=====================
-Make sure colons are ignored outside of attributions
-=====================
+==================
+Nested block tags
+==================
 
-#block_tag
+# parent
+
+A beat.
+
+## child
+
+### grandchild
+
+Deep beat.
+
+---
+
+(source_file
+  (empty)
+  (block
+    (block_tag
+      (identifier))
+    (empty)
+    (beat
+      (text_content
+        (text_fragment))))
+  (empty)
+  (block
+    (block_tag
+      (identifier)))
+  (empty)
+  (block
+    (block_tag
+      (identifier))
+    (empty)
+    (beat
+      (text_content
+        (text_fragment)))))
+
+==================
+Colons are ignored outside of attributions
+==================
+
+# block_tag
 
 Beat text here, as always
 
@@ -108,101 +179,80 @@ This one just tests a normal colon usage: we'll see if it works!
       (text_content
         (text_fragment)))))
 
-===================
-Are choices parsing correctly?
-===================
+==================
+Block-level and guarded operations
+==================
 
-#block_tag
+# ops
 
-Beat text here, as always
+:simple()
 
-> First choice
-> Exit choice
-  EXIT 14
-> Go choice
-  GO next chapter.ska -- This GO moves us to a different Skald file.
-> (? some_condition = "test") This choice is conditional
-> This one goes -> to_school
-> This one mutates
-  ~ equate = :some_method(with_arg)
-  ~ add += 3
-  ~ add += :method_output("cat")
+~ age += 10
+
+(? gender = "m") ~ age += 2
+
+(? going) -> somewhere
+
+EXIT
 
 ---
 
 (source_file
-      (empty)
-      (block
-        (block_tag
-          (identifier))
-        (empty)
-        (beat
-          (text_content
-            (text_fragment)))
-        (empty)
-        (choices
-          (choice
-            (text_content
-              (text_fragment)))
-          (choice
-            (text_content
-              (text_fragment))
-            (indented_operation
-              (operation
-                (exit_op
-                  (rvalue
-                    (simple_value
-                      (number)))))))
-          (choice
-            (text_content
-              (text_fragment)))
-          (ERROR
-            (UNEXPECTED 'n'))
-          (comment)
-          (empty)
-          (choice
-            (conditional
-              (conditional_expression
-                (conditional_clause
-                  (conditional_atom
-                    (rvalue
-                      (variable_ref
-                        (variable_name)))
-                    (rvalue
-                      (simple_value
-                        (string)))))))
-            (text_content
-              (text_fragment)))
-          (choice
-            (text_content
-              (text_fragment)))
-          (choice
-            (text_content
-              (text_fragment))
-            (indented_operation
-              (operation
-                (mutation_op
-                  (variable_name)
-                  (rvalue
-                    (method_call
-                      (identifier)
-                      (rvalue
-                        (variable_ref
-                          (variable_name))))))))
-            (indented_operation
-              (operation
-                (mutation_op
-                  (variable_name)
-                  (rvalue
-                    (simple_value
-                      (number))))))
-            (indented_operation
-              (operation
-                (mutation_op
-                  (variable_name)
-                  (rvalue
-                    (method_call
-                      (identifier)
-                      (rvalue
-                        (simple_value
-                          (string))))))))))))
+  (empty)
+  (block
+    (block_tag
+      (identifier))
+    (empty)
+    (operation_line
+      (operation
+        (method_call_op
+          (method_call
+            (identifier)))))
+    (empty)
+    (operation_line
+      (operation
+        (mutation_op
+          (variable_name
+            (identifier))
+          (rvalue
+            (simple_value
+              (number))))))
+    (empty)
+    (operation_line
+      (conditional
+        (conditional_expression
+          (conditional_clause
+            (conditional_atom
+              (rvalue
+                (variable_ref
+                  (variable_name
+                    (identifier))))
+              (rvalue
+                (simple_value
+                  (string)))))))
+      (operation
+        (mutation_op
+          (variable_name
+            (identifier))
+          (rvalue
+            (simple_value
+              (number))))))
+    (empty)
+    (operation_line
+      (conditional
+        (conditional_expression
+          (conditional_clause
+            (conditional_atom
+              (rvalue
+                (variable_ref
+                  (variable_name
+                    (identifier))))))))
+      (operation
+        (move_op
+          (move_target
+            (move_path
+              (identifier))))))
+    (empty)
+    (operation_line
+      (operation
+        (exit_op)))))

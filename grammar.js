@@ -8,37 +8,64 @@ module.exports = grammar({
 
   rules: {
 
-    source_file: $ => seq(
-      repeat(choice($.variable_declaration, prec(3, $.comment))),
-      repeat(choice($.testbed, prec(2, $.comment))),
-      repeat(choice($.block, prec(1, $.comment))),
-    ),
+    // A skald source file: top matter (any order), then narrative blocks.
+    // Codex files (*.codex) share this grammar; @methods / @globals sections
+    // are top-matter items and codex files simply contain no blocks.
+    source_file: $ => repeat(choice(
+      $.let_block,
+      $.testbed,
+      $.receive,
+      $.methods_block,
+      $.globals_block,
+      $.block,
+      $.comment,
+    )),
 
     // Empty lines
     empty: $ => /\n/,
 
-    // Comments
-    comment: $ => token(seq('--', /.*/)),
+    // Comments (three hyphens; `--` is plain text inside beats)
+    comment: $ => token(seq('---', /.*/)),
 
-    // Variable declarations
-    variable_declaration: $ => seq(
-      choice('~', '<'),
-      field('name', $.variable_name),
-      '=',
-      field('value', $.rvalue),
+    // -- Top matter --------------------------------------------------------
+
+    // @let ... @end — module-scoped variable declarations
+    let_block: $ => seq(
+      '@let',
+      optional($.comment),
+      /\n/,
+      repeat(choice($.declaration, $.comment)),
+      '@end',
       optional($.comment),
       /\n/,
     ),
 
-    variable_name: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
+    // name [type] [= default] — used by @let and @globals
+    declaration: $ => seq(
+      field('name', $.variable_name),
+      optional(field('type', $.type)),
+      optional(seq('=', field('value', $.simple_value))),
+      optional($.comment),
+      /\n/,
+    ),
 
-    // Testbeds
+    type: $ => choice('int', 'float', 'string', 'bool'),
+
+    // @receive path/to/module.ska — LSP hint for pushed module variables
+    receive: $ => seq(
+      '@receive',
+      field('module', $.module_path),
+      optional($.comment),
+      /\n/,
+    ),
+
+    // @testbed name ... @end
     testbed: $ => seq(
       '@testbed',
       field('name', $.identifier),
       optional($.comment),
       /\n/,
-      repeat($.testbed_declaration),
+      repeat(choice($.testbed_declaration, $.comment)),
       '@end',
       optional($.comment),
       /\n/,
@@ -52,59 +79,136 @@ module.exports = grammar({
       /\n/,
     ),
 
-    // Blocks
+    // -- Codex sections (*.codex) -------------------------------------------
+
+    // @methods ... @end
+    methods_block: $ => seq(
+      '@methods',
+      optional($.comment),
+      /\n/,
+      repeat(choice($.method_def, $.comment)),
+      '@end',
+      optional($.comment),
+      /\n/,
+    ),
+
+    method_def: $ => seq(
+      field('name', $.identifier),
+      '(',
+      commaSep($.arg_def),
+      ')',
+      field('returns', $.method_signature),
+      optional($.comment),
+      /\n/,
+    ),
+
+    arg_def: $ => seq(
+      field('name', $.identifier),
+      field('type', $.type),
+    ),
+
+    method_signature: $ => choice($.type, 'action'),
+
+    // @globals ... @end
+    globals_block: $ => seq(
+      '@globals',
+      optional($.comment),
+      /\n/,
+      repeat(choice($.declaration, $.comment)),
+      '@end',
+      optional($.comment),
+      /\n/,
+    ),
+
+    // -- Blocks --------------------------------------------------------------
+
+    // Blocks are flat in the parse tree; nesting depth comes from the tag
+    // prefix (#, ##, ###) and is resolved semantically by skald itself.
     block: $ => prec.right(seq(
       field('tag', $.block_tag),
-      repeat(choice(
-        $.beat,
-        $.logic_beat,
-        $.comment,
-      )),
+      repeat(choice($.cond_chain, $._block_member)),
     )),
 
-    block_tag: $ => seq('#', $.identifier, optional($.comment), /\n/),
+    block_tag: $ => seq(
+      field('depth', choice('###', '##', '#')),
+      field('name', $.identifier),
+      optional($.comment),
+      /\n/,
+    ),
+
+    _block_member: $ => choice(
+      $.beat,
+      $.operation_line,
+      $.choices,
+      $.comment,
+    ),
+
+    // -- Conditional chains ---------------------------------------------------
+
+    cond_chain: $ => seq(
+      $.if_clause,
+      repeat($.elseif_clause),
+      optional($.else_clause),
+      '@endif',
+      optional($.comment),
+      /\n/,
+    ),
+
+    if_clause: $ => prec.right(seq(
+      '@if',
+      field('condition', $.conditional_expression),
+      optional($.comment),
+      /\n/,
+      repeat($._block_member),
+    )),
+
+    elseif_clause: $ => prec.right(seq(
+      '@elseif',
+      field('condition', $.conditional_expression),
+      optional($.comment),
+      /\n/,
+      repeat($._block_member),
+    )),
+
+    else_clause: $ => prec.right(seq(
+      '@else',
+      optional($.comment),
+      /\n/,
+      repeat($._block_member),
+    )),
+
+    // -- Beats -----------------------------------------------------------------
 
     attribution: $ => token(seq(/[a-zA-Z_][a-zA-Z0-9_]*/, ':')),
 
-    // Beats (dialogue/logic lines)
-    beat: $ => prec.right(seq(
+    beat: $ => seq(
       optional($.conditional),
       optional(field('attribution', $.attribution)),
       field('content', $.text_content),
       /\n/,
-      repeat($.indented_operation),
-      optional($.choices),
-    )),
-
-    logic_beat: $ => choice(
-      // Multi-line: conditional/else, then operations on following lines
-      seq(
-        '*',
-        choice($.conditional, '(else)'),
-        optional($.comment),
-        /\n/,
-        repeat1($.indented_operation),
-      ),
-      // Single-line: conditional/else with operation on same line
-      seq(
-        '*',
-        choice($.conditional, '(else)'),
-        $.operation,
-        optional($.comment),
-        /\n/,
-      ),
     ),
 
-    // Text content with insertions
-    text_content: $ => repeat1(choice(
+    // A standalone operation line, optionally guarded: (? cond) ~ x += 1
+    operation_line: $ => seq(
+      optional($.conditional),
+      $.operation,
+      optional($.comment),
+      /\n/,
+    ),
+
+    // -- Text content with insertions ---------------------------------------------
+
+    text_content: $ => prec.right(repeat1(choice(
       $.text_fragment,
+      '-',
       $.insertion,
       $.inline_comment,
-    )),
+    ))),
 
-    text_fragment: $ => token(prec(-1, /[^{}\n\r]+/)),
+    // Hyphens are handled separately so `->` can terminate choice text.
+    text_fragment: $ => token(prec(-1, /[^{}\-\n\r]+/)),
 
-    inline_comment: $ => seq('{--', /[^}]*/, '}'),
+    inline_comment: $ => token(seq('{---', /[^}]*/, '}')),
 
     insertion: $ => seq(
       '{',
@@ -135,12 +239,13 @@ module.exports = grammar({
     ),
 
     switch_case: $ => seq(
-      field('key', $.simple_value),
+      field('key', $.rvalue),
       ':',
       field('value', $.rvalue),
     ),
 
-    // Conditionals
+    // -- Conditionals ----------------------------------------------------------
+
     conditional: $ => seq(
       '(?',
       field('expression', $.conditional_expression),
@@ -173,25 +278,30 @@ module.exports = grammar({
       ),
     ),
 
-    // Choices
-    choices: $ => repeat1($.choice),
+    // -- Choices -----------------------------------------------------------------
 
-    choice: $ => seq(
+    choices: $ => prec.right(repeat1($.choice)),
+
+    choice: $ => prec.right(seq(
       '>',
       optional($.conditional),
       field('text', $.text_content),
-      optional(seq('->', field('target', $.identifier))),
+      optional(seq('->', field('target', $.move_target))),
       /\n/,
-      repeat($.indented_operation),
-    ),
+      repeat($.choice_member),
+    )),
 
-    // Operations (must be indented when on separate lines)
-    indented_operation: $ => prec.right(2, seq(
+    // Indented members under a choice: operations or nested beats
+    choice_member: $ => prec.right(2, seq(
       /[ \t]+/,
-      $.operation,
-      optional($.comment),
+      choice(
+        seq(optional($.conditional), $.operation, optional($.comment)),
+        seq(optional($.conditional), optional(field('attribution', $.attribution)), field('content', $.text_content)),
+      ),
       /\n/,
     )),
+
+    // -- Operations ---------------------------------------------------------------
 
     operation: $ => choice(
       $.move_op,
@@ -201,28 +311,47 @@ module.exports = grammar({
       $.mutation_op,
     ),
 
-    move_op: $ => seq('->', field('target', $.identifier)),
+    move_op: $ => seq('->', field('target', $.move_target)),
 
-    go_module_op: $ => seq(
-      'GO',
-      field('module', $.module_path),
-      optional(seq('->', field('tag', $.identifier))),
+    // Full path (block, block.child, block.child.grandchild) or relative
+    // steps: .child, -sibling, ^ (parent, repeatable), in combination.
+    move_target: $ => choice(
+      $.move_path,
+      $.move_relative,
     ),
 
-    module_path: $ => /[a-zA-Z0-9_\/]+\.ska/,
+    move_path: $ => prec.right(seq(
+      $.identifier,
+      repeat(seq('.', $.identifier)),
+    )),
 
-    exit_op: $ => seq('EXIT', optional($.rvalue)),
+    move_relative: $ => prec.right(repeat1(choice(
+      seq('.', $.identifier),
+      seq('-', $.identifier),
+      '^',
+    ))),
+
+    go_module_op: $ => prec.right(seq(
+      'GO',
+      field('module', $.module_path),
+      optional(seq('->', field('tag', $.move_target))),
+    )),
+
+    module_path: $ => /[a-zA-Z0-9_][a-zA-Z0-9_\/.\-]*/,
+
+    exit_op: $ => prec.right(seq('EXIT', optional($.rvalue))),
 
     method_call_op: $ => $.method_call,
 
     mutation_op: $ => seq(
       '~',
       field('variable', $.variable_name),
-      field('operator', choice('=', '+=', '-=', '=!')),
+      field('operator', choice('=!', '+=', '-=', '=')),
       optional(field('value', $.rvalue)),
     ),
 
-    // RValues (right-hand side values)
+    // -- RValues (right-hand side values) ----------------------------------------
+
     rvalue: $ => choice(
       $.simple_value,
       $.variable_ref,
@@ -241,12 +370,15 @@ module.exports = grammar({
       ':',
       field('method', $.identifier),
       '(',
-      optional(commaSep($.rvalue)),
+      commaSep($.rvalue),
       ')',
     ),
 
-    // Primitives
+    // -- Primitives -----------------------------------------------------------------
+
     identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
+
+    variable_name: $ => $.identifier,
 
     string: $ => token(seq(
       '"',
@@ -257,7 +389,7 @@ module.exports = grammar({
       '"',
     )),
 
-    number: $ => /\d+(\.\d+)?/,
+    number: $ => /[+-]?\d+(\.\d+)?/,
 
     boolean: $ => choice('true', 'false'),
   }

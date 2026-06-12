@@ -1,0 +1,194 @@
+==================
+Choices with operations and conditions
+==================
+
+# block_tag
+
+Beat text here, as always
+
+> First choice
+> Exit choice
+  EXIT 14
+> Go choice
+  GO subfolder/other_module.ska
+> Directed go
+  GO subfolder/other_module.ska -> some_tag
+> (? some_condition = "test") This choice is conditional
+> This one mutates
+  ~ equate = :some_method(with_arg)
+  ~ add += 3
+  (? guarded) ~ add += :method_output("cat")
+  An indented beat under the choice.
+
+---
+
+(source_file
+  (empty)
+  (block
+    (block_tag
+      (identifier))
+    (empty)
+    (beat
+      (text_content
+        (text_fragment)))
+    (empty)
+    (choices
+      (choice
+        (text_content
+          (text_fragment)))
+      (choice
+        (text_content
+          (text_fragment))
+        (choice_member
+          (operation
+            (exit_op
+              (rvalue
+                (simple_value
+                  (number)))))))
+      (choice
+        (text_content
+          (text_fragment))
+        (choice_member
+          (operation
+            (go_module_op
+              (module_path)))))
+      (choice
+        (text_content
+          (text_fragment))
+        (choice_member
+          (operation
+            (go_module_op
+              (module_path)
+              (move_target
+                (move_path
+                  (identifier)))))))
+      (choice
+        (conditional
+          (conditional_expression
+            (conditional_clause
+              (conditional_atom
+                (rvalue
+                  (variable_ref
+                    (variable_name
+                      (identifier))))
+                (rvalue
+                  (simple_value
+                    (string)))))))
+        (text_content
+          (text_fragment)))
+      (choice
+        (text_content
+          (text_fragment))
+        (choice_member
+          (operation
+            (mutation_op
+              (variable_name
+                (identifier))
+              (rvalue
+                (method_call
+                  (identifier)
+                  (rvalue
+                    (variable_ref
+                      (variable_name
+                        (identifier)))))))))
+        (choice_member
+          (operation
+            (mutation_op
+              (variable_name
+                (identifier))
+              (rvalue
+                (simple_value
+                  (number))))))
+        (choice_member
+          (conditional
+            (conditional_expression
+              (conditional_clause
+                (conditional_atom
+                  (rvalue
+                    (variable_ref
+                      (variable_name
+                        (identifier))))))))
+          (operation
+            (mutation_op
+              (variable_name
+                (identifier))
+              (rvalue
+                (method_call
+                  (identifier)
+                  (rvalue
+                    (simple_value
+                      (string))))))))
+        (choice_member
+          (text_content
+            (text_fragment)))))))
+
+==================
+Transitions: full, relative, inline
+==================
+
+# moves
+
+> Inline move -> bob.child
+> Up to parent
+  -> ^^
+> To sib
+  -> -b
+> To grandchild
+  -> .alice.b
+> Dotted path
+  -> alice.b.c
+
+---
+
+(source_file
+  (empty)
+  (block
+    (block_tag
+      (identifier))
+    (empty)
+    (choices
+      (choice
+        (text_content
+          (text_fragment))
+        (move_target
+          (move_path
+            (identifier)
+            (identifier))))
+      (choice
+        (text_content
+          (text_fragment))
+        (choice_member
+          (operation
+            (move_op
+              (move_target
+                (move_relative))))))
+      (choice
+        (text_content
+          (text_fragment))
+        (choice_member
+          (operation
+            (move_op
+              (move_target
+                (move_relative
+                  (identifier)))))))
+      (choice
+        (text_content
+          (text_fragment))
+        (choice_member
+          (operation
+            (move_op
+              (move_target
+                (move_relative
+                  (identifier)
+                  (identifier)))))))
+      (choice
+        (text_content
+          (text_fragment))
+        (choice_member
+          (operation
+            (move_op
+              (move_target
+                (move_path
+                  (identifier)
+                  (identifier)
+                  (identifier))))))))))
